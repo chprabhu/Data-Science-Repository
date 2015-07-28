@@ -1,0 +1,368 @@
+{
+ "metadata": {
+  "name": "",
+  "signature": "sha256:83dbdd265a083dde62de5308c02ace0eb2ee1afea45c1f4b55d13d04bdd3cb90"
+ },
+ "nbformat": 3,
+ "nbformat_minor": 0,
+ "worksheets": [
+  {
+   "cells": [
+    {
+     "cell_type": "heading",
+     "level": 2,
+     "metadata": {},
+     "source": [
+      "Read In Data"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import pandas as pd\n",
+      "import numpy as np\n",
+      "\n",
+      "df = pd.read_csv('C:\\Users\\cprab\\Desktop\\ISLR\\default.csv')\n",
+      "\n",
+      "print df.head()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "  default student      balance       income\n",
+        "0      No      No   729.526495  44361.62507\n",
+        "1      No     Yes   817.180407  12106.13470\n",
+        "2      No      No  1073.549164  31767.13895\n",
+        "3      No      No   529.250605  35704.49394\n",
+        "4      No      No   785.655883  38463.49588\n"
+       ]
+      }
+     ],
+     "prompt_number": 124
+    },
+    {
+     "cell_type": "heading",
+     "level": 2,
+     "metadata": {},
+     "source": [
+      "Create Target Variable"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "df['target'] = 0\n",
+      "df['target'][df.default == 'No'] = 0\n",
+      "df['target'][df.default == 'Yes'] = 1"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 126
+    },
+    {
+     "cell_type": "heading",
+     "level": 2,
+     "metadata": {},
+     "source": [
+      "Run Logistic Regression on Training Set"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import statsmodels.api as sm\n",
+      "\n",
+      "# Reshaping the user_age variable for use in the logit model\n",
+      "x = df['balance'].reshape(len(df['balance']),1)\n",
+      "y = df['target']\n",
+      "\n",
+      "num_samples, num_features = x.shape\n",
+      "half = int(num_samples / 2)\n",
+      "\n",
+      "x_train, x_test = x[:half], x[half:]\n",
+      "y_train, y_test = y[:half], y[half:]\n",
+      "\n",
+      "# Adding a constant column to the RHS, in order to get back an estimate for the intercept value\n",
+      "x_train = sm.add_constant(x_train)\n",
+      "\n",
+      "logit = sm.Logit(y_train, x_train)\n",
+      "result = logit.fit()\n",
+      "print result.summary()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "Optimization terminated successfully.\n",
+        "         Current function value: 0.081404\n",
+        "         Iterations 10\n",
+        "                           Logit Regression Results                           \n",
+        "==============================================================================\n",
+        "Dep. Variable:                 target   No. Observations:                 5000\n",
+        "Model:                          Logit   Df Residuals:                     4998\n",
+        "Method:                           MLE   Df Model:                            1\n",
+        "Date:                Fri, 24 Jul 2015   Pseudo R-squ.:                  0.4634\n",
+        "Time:                        15:17:01   Log-Likelihood:                -407.02\n",
+        "converged:                       True   LL-Null:                       -758.57\n",
+        "                                        LLR p-value:                6.324e-155\n",
+        "==============================================================================\n",
+        "                 coef    std err          z      P>|z|      [95.0% Conf. Int.]\n",
+        "------------------------------------------------------------------------------\n",
+        "const        -10.6584      0.502    -21.247      0.000       -11.642    -9.675\n",
+        "x1             0.0056      0.000     18.063      0.000         0.005     0.006\n",
+        "==============================================================================\n"
+       ]
+      }
+     ],
+     "prompt_number": 127
+    },
+    {
+     "cell_type": "heading",
+     "level": 2,
+     "metadata": {},
+     "source": [
+      "Score the Test Set"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "y_predict_prob = (np.exp(-10.6548+0.0056*x_test)) / (1+np.exp(-10.6548+0.0056*x_test))\n",
+      "print y_predict_prob.shape\n",
+      "\n",
+      "y_predict = pd.DataFrame(y_predict_prob,columns=['predict_prob'])\n",
+      "print y_predict.head()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "(5000, 1)\n",
+        "   predict_prob\n",
+        "0      0.000118\n",
+        "1      0.000806\n",
+        "2      0.000720\n",
+        "3      0.021900\n",
+        "4      0.000147\n"
+       ]
+      }
+     ],
+     "prompt_number": 128
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "threshold = 0.5\n",
+      "y_predict['predict'] = 0\n",
+      "y_predict['predict'][y_predict.predict_prob >= threshold] = 1\n",
+      "y_predict['predict'][y_predict.predict_prob < threshold] = 0\n",
+      "\n",
+      "print y_predict.head()\n",
+      "#print y_predict[y_predict['predict']==1]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "   predict_prob  predict\n",
+        "0      0.000118        0\n",
+        "1      0.000806        0\n",
+        "2      0.000720        0\n",
+        "3      0.021900        0\n",
+        "4      0.000147        0\n"
+       ]
+      }
+     ],
+     "prompt_number": 129
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "d = {'actual': y_test}\n",
+      "y_test = pd.DataFrame(d)\n",
+      "\n",
+      "y_test = y_test.reset_index(drop=True)\n",
+      "print y_test.head()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "   actual\n",
+        "0       0\n",
+        "1       0\n",
+        "2       0\n",
+        "3       0\n",
+        "4       0\n"
+       ]
+      }
+     ],
+     "prompt_number": 130
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "final_df = pd.concat([y_predict, y_test], axis=1)\n",
+      "print final_df.head()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "   predict_prob  predict  actual\n",
+        "0      0.000118        0       0\n",
+        "1      0.000806        0       0\n",
+        "2      0.000720        0       0\n",
+        "3      0.021900        0       0\n",
+        "4      0.000147        0       0\n"
+       ]
+      }
+     ],
+     "prompt_number": 131
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "def calc_roc_vals(y_predict, y_test, threshold):\n",
+      "    y_predict['predict'] = 0\n",
+      "    y_predict['predict'][y_predict.predict_prob >= threshold] = 1\n",
+      "    y_predict['predict'][y_predict.predict_prob < threshold] = 0\n",
+      "    final_df = pd.concat([y_predict, y_test], axis=1)\n",
+      "    \n",
+      "    total_pos = len(final_df[final_df['actual']==1])\n",
+      "    total_neg = len(final_df[final_df['actual']==0])\n",
+      "    \n",
+      "    true_pos = final_df[final_df['actual']==1]['predict'].sum() \n",
+      "    false_pos = final_df[final_df['actual']==0]['predict'].sum()\n",
+      "    \n",
+      "    return true_pos, false_pos, total_pos, total_neg\n",
+      "\n",
+      "true_pos, false_pos, total_pos, total_neg = calc_roc_vals(y_predict, y_test, 0.5)\n",
+      "\n",
+      "print true_pos / float(total_pos)\n",
+      "print false_pos / float(total_neg)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "54\n",
+        "28\n",
+        "158\n",
+        "4842\n",
+        "0.341772151899\n",
+        "0.00578273440727\n"
+       ]
+      }
+     ],
+     "prompt_number": 151
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "index=0\n",
+      "roc_points = pd.DataFrame(columns=['threshold','tpr','fpr'])\n",
+      "\n",
+      "for i in np.arange(0.01,1,0.01): \n",
+      "    true_pos, false_pos, total_pos, total_neg = calc_roc_vals(y_predict, y_test, i)\n",
+      "    tpr = true_pos / float(total_pos)\n",
+      "    fpr = false_pos / float(total_neg)\n",
+      "    roc_points.loc[index] = [i, tpr, fpr]\n",
+      "    index = index + 1\n",
+      "    \n",
+      "print roc_points.head()\n",
+      "print len(roc_points)\n"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "  threshold        tpr        fpr\n",
+        "0      0.01  0.9620253  0.2806691\n",
+        "1      0.02  0.9240506  0.2030153\n",
+        "2      0.03  0.8987342  0.1625361\n",
+        "3      0.04  0.8670886  0.1373399\n",
+        "4      0.05  0.8481013  0.1189591\n",
+        "99\n"
+       ]
+      }
+     ],
+     "prompt_number": 172
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "%matplotlib inline\n",
+      "import matplotlib.pyplot as plt\n",
+      "# Plot line graph of order rate by customer age\n",
+      "fpr = roc_points['fpr']\n",
+      "tpr = roc_points['tpr']\n",
+      "plt.plot(fpr, tpr)\n",
+      "plt.xlabel('False Positive Rate')\n",
+      "plt.ylabel('True Positive Rate')\n",
+      "plt.title('ROC Curve')\n",
+      "plt.show()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "display_data",
+       "png": "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\nEBERERERERERERERERERERERERERERERERERESlN/x9zjWmJJU0V3wAAAABJRU5ErkJggg==\n",
+       "text": [
+        "<matplotlib.figure.Figure at 0x1f061110>"
+       ]
+      }
+     ],
+     "prompt_number": 171
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    }
+   ],
+   "metadata": {}
+  }
+ ]
+}
